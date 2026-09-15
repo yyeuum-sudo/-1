@@ -68,41 +68,32 @@
 </div>
 
 <script>
-    function renderWidget() {
-        const current = Number(localStorage.getItem('stream_currentAmount')) || 0;
-        const goal = Number(localStorage.getItem('stream_goalAmount')) || 100000;
-        const title = localStorage.getItem('stream_titleText') || '후원 목표 달성 현황';
+    async function fetchWidgetData() {
+        try {
+            const response = await fetch('http://localhost:3000/api/widget-setting');
+            if (!response.ok) return;
+            const data = await response.json();
 
-        let percent = goal > 0 ? Math.round((current / goal) * 100) : 0;
-        if (percent > 100) percent = 100;
+            const current = Number(data.current_amount) || 0;
+            const goal = Number(data.goal_amount) || 100000;
+            const title = data.title_text || '후원 목표 달성 현황';
 
-        document.getElementById('displayTitle').innerText = title;
-        document.getElementById('displayPercent').innerText = percent + '%';
-        document.getElementById('displayAmount').innerHTML = 
-            current.toLocaleString() + '원 <span>/ ' + goal.toLocaleString() + '원</span>';
-        document.getElementById('displayGauge').style.width = percent + '%';
+            let percent = goal > 0 ? Math.round((current / goal) * 100) : 0;
+            if (percent > 100) percent = 100;
+
+            document.getElementById('displayTitle').innerText = title;
+            document.getElementById('displayPercent').innerText = percent + '%';
+            document.getElementById('displayAmount').innerHTML = 
+                current.toLocaleString() + '원 <span>/ ' + goal.toLocaleString() + '원</span>';
+            document.getElementById('displayGauge').style.width = percent + '%';
+        } catch (e) {
+            console.log('DB 연동 대기 중...');
+        }
     }
 
-    // 최초 로드
-    renderWidget();
-
-    // 1. 브라우저 전용 실시간 채널 연결 (BroadcastChannel)
-    const streamChannel = new BroadcastChannel('stream_sync_channel');
-    streamChannel.onmessage = function(event) {
-        if (event.data === 'update') {
-            renderWidget();
-        }
-    };
-
-    // 2. 기존 스토리지 이벤트 백업 연동
-    window.addEventListener('storage', function(e) {
-        if (e.key && e.key.startsWith('stream_')) {
-            renderWidget();
-        }
-    });
-
-    // 3. 주기적 강제 동기화 (안전장치)
-    setInterval(renderWidget, 500);
+    // 최초 로드 및 1초마다 DB 데이터를 실시간으로 감지(폴링)
+    fetchWidgetData();
+    setInterval(fetchWidgetData, 1000);
 </script>
 
 </body>
