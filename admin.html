@@ -84,7 +84,7 @@
 <body>
 
 <div class="control-panel">
-    <h2>방송 리모컨 제어판</h2>
+    <h2>방송 리모컨 제어판 (DB 연동)</h2>
     
     <div class="input-group">
         <label>위젯 타이틀 (제목)</label>
@@ -101,37 +101,35 @@
         <input type="number" id="goalInput" placeholder="예: 100000">
     </div>
 
-    <button class="save-btn" onclick="saveData()">적용하기</button>
+    <button class="save-btn" onclick="saveDataToDB()">데이터베이스에 적용하기</button>
     <div class="status-msg" id="statusMsg"></div>
 </div>
 
 <script>
-    // 통신 채널 생성
-    const streamChannel = new BroadcastChannel('stream_sync_channel');
-
-    window.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('titleInput').value = localStorage.getItem('stream_titleText') || '';
-        document.getElementById('currentInput').value = localStorage.getItem('stream_currentAmount') || '';
-        document.getElementById('goalInput').value = localStorage.getItem('stream_goalAmount') || '';
-    });
-
-    function saveData() {
+    async function saveDataToDB() {
         const title = document.getElementById('titleInput').value;
         const current = document.getElementById('currentInput').value;
         const goal = document.getElementById('goalInput').value;
-
-        // 값 저장
-        localStorage.setItem('stream_titleText', title);
-        localStorage.setItem('stream_currentAmount', current);
-        localStorage.setItem('stream_goalAmount', goal);
-
-        // 실시간 채널로 즉각 신호 발사!
-        streamChannel.postMessage('update');
-
-        // 피드백 메시지
         const msg = document.getElementById('statusMsg');
-        msg.innerText = '성공적으로 적용되었습니다!';
-        setTimeout(() => { msg.innerText = ''; }, 2000);
+
+        try {
+            // 로컬 또는 서버 API로 데이터 전송
+            const response = await fetch('http://localhost:3000/api/widget-setting', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, current, goal })
+            });
+
+            if (response.ok) {
+                msg.innerText = 'DB에 성공적으로 반영되었습니다!';
+            } else {
+                msg.innerText = '저장 실패 (서버를 확인하세요)';
+            }
+        } catch (error) {
+            msg.innerText = '서버 연결 실패 (로컬 서버 구동 필요)';
+        }
+
+        setTimeout(() => { msg.innerText = ''; }, 2500);
     }
 </script>
 
