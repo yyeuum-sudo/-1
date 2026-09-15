@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Stream Widget - Viewer Screen</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: transparent;
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            color: #ffffff;
+        }
+        .widget-wrapper {
+            width: 420px;
+            padding: 20px;
+            background: rgba(18, 18, 18, 0.75);
+            backdrop-filter: blur(6px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        .header-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .title { font-size: 15px; font-weight: 600; color: #b3b3b3; }
+        .percentage { font-size: 18px; font-weight: bold; color: #00ffcc; }
+        .amount-area {
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 14px;
+            letter-spacing: -0.5px;
+        }
+        .amount-area span { font-size: 16px; color: #888; font-weight: normal; }
+        .bar-container {
+            width: 100%;
+            height: 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        .bar-gauge {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #00c6ff, #0072ff);
+            border-radius: 8px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body>
+
+<div class="widget-wrapper">
+    <div class="header-area">
+        <div class="title" id="displayTitle">후원 목표 달성 현황</div>
+        <div class="percentage" id="displayPercent">0%</div>
+    </div>
+    <div class="amount-area" id="displayAmount">
+        0원 <span>/ 100,000원</span>
+    </div>
+    <div class="bar-container">
+        <div class="bar-gauge" id="displayGauge"></div>
+    </div>
+</div>
+
+<script>
+    function renderWidget() {
+        const current = Number(localStorage.getItem('stream_currentAmount')) || 0;
+        const goal = Number(localStorage.getItem('stream_goalAmount')) || 100000;
+        const title = localStorage.getItem('stream_titleText') || '후원 목표 달성 현황';
+
+        let percent = goal > 0 ? Math.round((current / goal) * 100) : 0;
+        if (percent > 100) percent = 100;
+
+        document.getElementById('displayTitle').innerText = title;
+        document.getElementById('displayPercent').innerText = percent + '%';
+        document.getElementById('displayAmount').innerHTML = 
+            current.toLocaleString() + '원 <span>/ ' + goal.toLocaleString() + '원</span>';
+        document.getElementById('displayGauge').style.width = percent + '%';
+    }
+
+    // 최초 로드
+    renderWidget();
+
+    // 1. 브라우저 전용 실시간 채널 연결 (BroadcastChannel)
+    const streamChannel = new BroadcastChannel('stream_sync_channel');
+    streamChannel.onmessage = function(event) {
+        if (event.data === 'update') {
+            renderWidget();
+        }
+    };
+
+    // 2. 기존 스토리지 이벤트 백업 연동
+    window.addEventListener('storage', function(e) {
+        if (e.key && e.key.startsWith('stream_')) {
+            renderWidget();
+        }
+    });
+
+    // 3. 주기적 강제 동기화 (안전장치)
+    setInterval(renderWidget, 500);
+</script>
+
+</body>
+</html>
